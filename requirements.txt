@@ -1,0 +1,17 @@
+# GUI框架
+PySide6==6.6.1
+shiboken6==6.6.1  # PySide6的底层依赖
+
+# 视频播放
+python-vlc==3.0.20123
+
+# 图片处理
+Pillow==10.1.0
+opencv-python==4.8.1.78
+
+# 中文支持
+pypinyin==0.49.0
+
+# 工具库
+pathlib==1.0.1
+requests==2.31.0  # 用于未来可能的在线功能扩展 
