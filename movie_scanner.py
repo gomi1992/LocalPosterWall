@@ -3,10 +3,11 @@ from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
 
+
 class MovieScanner:
     def __init__(self):
         self.video_extensions = {
-            '.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v', 
+            '.mp4', '.mkv', '.avi', '.mov', '.wmv', '.m4v',
             '.flv', '.rmvb', '.rm', '.ts', '.webm'
         }
         self.poster_names = {'poster', 'poster.jpg', 'poster.png', 'folder.jpg'}
@@ -25,6 +26,12 @@ class MovieScanner:
             'Recovery',
             'Documents and Settings'
         }
+
+    def _get_nfo_files(self, folder_path):
+        nfo_files = list(folder_path.glob('*.nfo'))
+        if not nfo_files:
+            return None
+        return nfo_files
 
     def _read_nfo_rating(self, folder_path):
         """从 nfo 文件读取评分"""
@@ -65,24 +72,46 @@ class MovieScanner:
     def scan_folder(self, folder_path):
         """扫描电影文件夹"""
         movies = []
-        folder_path = Path(folder_path)
-        
+        # folder_path = Path(folder_path)
+        #
+        # try:
+        #     for item in folder_path.iterdir():
+        #         try:
+        #             if (item.is_dir() and
+        #                     os.access(item, os.R_OK) and
+        #                     item.name not in self.ignore_folders and
+        #                     not item.name.startswith('.')):
+        #                 movie_info = self._parse_movie_folder(item)
+        #                 if movie_info:
+        #                     movies.append(movie_info)
+        #         except (PermissionError, OSError):
+        #             continue  # 跳过无权限访问的文件夹
+        # except Exception as e:
+        #     print(f"Error scanning folder {folder_path}: {e}")
+        #     return []
+
+        folder_path = [Path(folder_path)]
         try:
-            for item in folder_path.iterdir():
+            while folder_path:
+                item = folder_path.pop()
                 try:
-                    if (item.is_dir() and 
-                        os.access(item, os.R_OK) and
-                        item.name not in self.ignore_folders and
-                        not item.name.startswith('.')):
+                    if (item.is_dir() and
+                            os.access(item, os.R_OK) and
+                            item.name not in self.ignore_folders and
+                            not item.name.startswith('.')):
                         movie_info = self._parse_movie_folder(item)
                         if movie_info:
                             movies.append(movie_info)
+                        else:
+                            for sub_dir in item.iterdir():
+                                if sub_dir.is_dir():
+                                    folder_path.append(sub_dir)
                 except (PermissionError, OSError):
                     continue  # 跳过无权限访问的文件夹
         except Exception as e:
             print(f"Error scanning folder {folder_path}: {e}")
             return []
-
+        print(movies)
         # 按年份降序排序
         movies.sort(
             key=lambda x: (x.get('year', '0000'), x.get('title')),
@@ -91,15 +120,20 @@ class MovieScanner:
         return movies
 
     def _parse_movie_folder(self, folder_path):
+        print(folder_path)
         """解析单个电影文件夹"""
         try:
             # 从文件夹名称中提取电影信息
             folder_name = folder_path.name
             year_match = re.search(r'\((\d{4})\)', folder_name)
-            year = year_match.group(1) if year_match else None
-            
+            year = year_match.group(1) if year_match else "1900"
+
             # 提取标题（去除年份）
             title = re.sub(r'\(\d{4}\)', '', folder_name).strip()
+
+            nfo_files = self._get_nfo_files(folder_path)
+            if nfo_files is None:
+                return None
 
             # 从 nfo 文件读取评分
             rating = self._read_nfo_rating(folder_path)
@@ -115,14 +149,21 @@ class MovieScanner:
                 if poster_path:
                     break
 
+            if poster_path is None:
+                movie_files = os.listdir(folder_path)
+                for movie_file in movie_files:
+                    if "poster" in movie_file:
+                        poster_path = folder_path / f"{movie_file}"
+                        break
+
             # 查找视频文件
             video_file = None
             resolution = None
-            
+
             # 遍历文件夹中的所有文件
             try:
                 for file in folder_path.iterdir():
-                    if (file.suffix.lower() in self.video_extensions and 
+                    if (file.suffix.lower() in self.video_extensions and
                             os.access(file, os.R_OK)):
                         video_file = file
                         # 从文件名中提取分辨率信息
@@ -149,4 +190,4 @@ class MovieScanner:
             print(f"Error parsing movie folder {folder_path}: {e}")
             return None
 
-        return None 
+        return None
