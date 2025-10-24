@@ -2,6 +2,7 @@ import json
 import os
 from pathlib import Path
 
+
 class ConfigManager:
     def __init__(self):
         self.config_file = Path.home() / '.movie_wall_config.json'
@@ -47,4 +48,4 @@ class ConfigManager:
         """更新配置"""
         config = self.load_config()
         config.update(updates)
-        self.save_config(config) 
+        self.save_config(config)

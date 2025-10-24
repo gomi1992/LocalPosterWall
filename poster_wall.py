@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (QWidget, QGridLayout, QLabel,
-                           QScrollArea, QVBoxLayout)
+                               QScrollArea, QVBoxLayout)
 from PySide6.QtCore import Qt, QTimer, QSize
 from PySide6.QtGui import QPixmap, QImage, QColor, QPainter, QPainterPath
 import subprocess
@@ -24,6 +24,7 @@ def load_and_scale_image(image_path, width, height):
 
 class RatingLabel(QLabel):
     """评分标签"""
+
     def __init__(self, rating, parent=None):
         super().__init__(parent)
         # 格式化评分，保留一位小数
@@ -52,6 +53,7 @@ class RatingLabel(QLabel):
 
 class ResolutionLabel(QLabel):
     """分辨率标签"""
+
     def __init__(self, text, parent=None):
         super().__init__(text, parent)
         self.setStyleSheet("""
@@ -109,14 +111,14 @@ class MoviePoster(QWidget):
         # 评分标签
         if self.movie_info.get('rating'):
             self.rating_label = RatingLabel(self.movie_info['rating'],
-                                          self.poster_container)
+                                            self.poster_container)
             # 左上角位置
             self.rating_label.move(10, 10)
 
         # 分辨率标签
         if self.movie_info.get('resolution'):
             self.res_label = ResolutionLabel(self.movie_info['resolution'],
-                                           self.poster_container)
+                                             self.poster_container)
             # 右上角位置，需要在标签创建后计算
             self.res_label.adjustSize()  # 确保标签大小已计算
             self.res_label.move(
@@ -280,12 +282,12 @@ class PosterWall(QScrollArea):
                 background: none;
             }
         """)
-        
+
         # 创建内容窗口
         self.content = QWidget()
         self.content.setStyleSheet("background-color: #111;")
         self.setWidget(self.content)
-        
+
         # 创建网格布局
         self.grid_layout = QGridLayout(self.content)
         self.grid_layout.setSpacing(16)
@@ -327,8 +329,8 @@ class PosterWall(QScrollArea):
         for movie in movies:
             poster = MoviePoster(movie, self.config_manager)
             self.grid_layout.addWidget(poster, row, col)
-            
+
             col += 1
             if col >= max_cols:
                 col = 0
-                row += 1 
+                row += 1

@@ -1,9 +1,9 @@
 import sys
 import os
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
-                            QHBoxLayout, QPushButton, QFileDialog, QListWidget,
-                            QDialog, QLabel, QDialogButtonBox, QMessageBox,
-                            QComboBox)
+                               QHBoxLayout, QPushButton, QFileDialog, QListWidget,
+                               QDialog, QLabel, QDialogButtonBox, QMessageBox,
+                               QComboBox)
 from PySide6.QtCore import Qt
 from pathlib import Path
 from config_manager import ConfigManager
@@ -15,6 +15,7 @@ from pypinyin import lazy_pinyin
 
 class FolderListDialog(QDialog):
     """文件夹列表对话框"""
+
     def __init__(self, folders, parent=None):
         super().__init__(parent)
         self.setWindowTitle('管理电影文件夹')
@@ -24,11 +25,11 @@ class FolderListDialog(QDialog):
 
     def setup_ui(self):
         layout = QVBoxLayout(self)
-        
+
         # 文件夹列表
         self.list_widget = QListWidget()
         self.list_widget.addItems(self.folders)
-        
+
         # 按钮布局
         btn_layout = QHBoxLayout()
         add_btn = QPushButton('添加文件夹')
@@ -37,7 +38,7 @@ class FolderListDialog(QDialog):
         remove_btn.clicked.connect(self.remove_folder)
         btn_layout.addWidget(add_btn)
         btn_layout.addWidget(remove_btn)
-        
+
         # 确认按钮
         button_box = QDialogButtonBox(
             QDialogButtonBox.Ok | QDialogButtonBox.Cancel
@@ -46,7 +47,7 @@ class FolderListDialog(QDialog):
         button_box.rejected.connect(self.reject)
         button_box.button(QDialogButtonBox.Ok).setText('确定')
         button_box.button(QDialogButtonBox.Cancel).setText('取消')
-        
+
         # 添加所有组件
         layout.addWidget(QLabel('已添加的文件夹：'))
         layout.addWidget(self.list_widget)
@@ -99,7 +100,7 @@ class FolderListDialog(QDialog):
                 folder = folders  # 直接使用选择的路径
                 if not folder.strip():
                     return
-                    
+
                 # 检查文件夹是否存在且可访问
                 path = Path(folder)
                 if not path.exists():
@@ -111,12 +112,12 @@ class FolderListDialog(QDialog):
                 if not os.access(path, os.R_OK):
                     QMessageBox.warning(self, '提示', f'无法访问该文件夹：{folder}')
                     return
-                
+
                 # 检查是否已添加
                 if folder in self.folders:
                     QMessageBox.information(self, '提示', f'该文件夹已添加：{folder}')
                     return
-                
+
                 # 添加到列表
                 self.folders.append(folder)
                 self.list_widget.addItem(folder)
@@ -199,7 +200,7 @@ class MovieWallApp(QMainWindow):
 
         # 创建顶部控制栏
         control_layout = QHBoxLayout()
-        
+
         # 左侧按钮组
         left_buttons = QHBoxLayout()
         manage_folders_btn = QPushButton('管理文件夹')
@@ -208,11 +209,11 @@ class MovieWallApp(QMainWindow):
         select_player_btn.clicked.connect(self.configure_player)
         refresh_btn = QPushButton('刷新列表')
         refresh_btn.clicked.connect(self.refresh_movies)
-        
+
         left_buttons.addWidget(manage_folders_btn)
         left_buttons.addWidget(select_player_btn)
         left_buttons.addWidget(refresh_btn)
-        
+
         # 右侧排序选项
         right_controls = QHBoxLayout()
         sort_label = QLabel('排序方式：')
@@ -220,10 +221,10 @@ class MovieWallApp(QMainWindow):
         self.sort_combo = QComboBox()
         self.sort_combo.addItems(['按年份降序', '按年份升序', '按标题升序', '按标题降序'])
         self.sort_combo.currentTextChanged.connect(self.sort_movies)
-        
+
         right_controls.addWidget(sort_label)
         right_controls.addWidget(self.sort_combo)
-        
+
         # 添加到控制栏
         control_layout.addLayout(left_buttons)
         control_layout.addStretch()
@@ -231,7 +232,7 @@ class MovieWallApp(QMainWindow):
 
         # 创建海报墙
         self.poster_wall = PosterWall(self.config_manager)
-        
+
         # 添加到主布局
         main_layout.addLayout(control_layout)
         main_layout.addWidget(self.poster_wall)
@@ -275,7 +276,7 @@ class MovieWallApp(QMainWindow):
                 if not os.access(path, os.X_OK):
                     QMessageBox.warning(self, '提示', '所选文件不是可执行程序！')
                     return
-                
+
                 self.config_manager.update_config({'player_path': player_path})
                 QMessageBox.information(self, '提示', '播放器设置已更新！')
         except Exception as e:
@@ -334,7 +335,7 @@ class MovieWallApp(QMainWindow):
             for folder in folders:
                 movies = self.movie_scanner.scan_folder(folder)
                 all_movies.extend(movies)
-            
+
             self.current_movies = all_movies
             # 应用当前选择的排序方式
             self.sort_movies(self.sort_combo.currentText())
@@ -347,4 +348,4 @@ if __name__ == '__main__':
     app.setStyle('Fusion')  # 使用 Fusion 风格
     window = MovieWallApp()
     window.show()
-    sys.exit(app.exec()) 
+    sys.exit(app.exec())
