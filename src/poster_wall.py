@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import (QWidget, QGridLayout, QLabel,
-                               QScrollArea, QVBoxLayout)
+                               QScrollArea, QVBoxLayout, QPushButton)
 from PySide6.QtCore import Qt, QTimer, QSize
 from PySide6.QtGui import QPixmap, QImage, QColor, QPainter, QPainterPath
 import subprocess
@@ -157,9 +157,13 @@ class MoviePoster(QWidget):
         """)
         self.year_label.setAlignment(Qt.AlignCenter)
 
+        self.play_button = QPushButton("播放")
+        self.play_button.clicked.connect(self.play_movie)
+
         # 添加到标题容器
         title_layout.addWidget(self.title_label)
         title_layout.addWidget(self.year_label)
+        title_layout.addWidget(self.play_button)
 
         # 添加所有组件到主布局
         layout.addWidget(self.poster_container)
@@ -227,8 +231,9 @@ class MoviePoster(QWidget):
 
     def mousePressEvent(self, event):
         """处理点击事件"""
-        if event.button() == Qt.LeftButton:
-            self.play_movie()
+        # if event.button() == Qt.LeftButton:
+        #     self.play_movie()
+        pass
 
     def play_movie(self):
         """播放电影"""
@@ -334,3 +339,12 @@ class PosterWall(QScrollArea):
             if col >= max_cols:
                 col = 0
                 row += 1
+
+    def clear_posters(self):
+        item_list = reversed(range(self.grid_layout.count()))
+
+        for i in item_list:
+            item = self.grid_layout.itemAt(i)
+            self.grid_layout.removeItem(item)
+            # if item.widget():
+            #     item.widget().deleteLater()

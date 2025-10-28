@@ -3,6 +3,8 @@ from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
 
+from src.cache_manager import CacheManager
+
 
 class MovieScanner:
     def __init__(self):
@@ -26,6 +28,8 @@ class MovieScanner:
             'Recovery',
             'Documents and Settings'
         }
+
+        self.cache_manager = CacheManager()
 
     def _get_nfo_files(self, folder_path):
         nfo_files = list(folder_path.glob('*.nfo'))
@@ -117,6 +121,7 @@ class MovieScanner:
             key=lambda x: (x.get('year', '0000'), x.get('title')),
             reverse=True
         )
+        self.cache_manager.set_cache(movies)
         return movies
 
     def _parse_movie_folder(self, folder_path):

@@ -244,7 +244,12 @@ class MovieWallApp(QMainWindow):
         """加载配置信息"""
         config = self.config_manager.load_config()
         if config.get('movie_folders'):
-            self.scan_movies(config['movie_folders'])
+            # self.scan_movies(config['movie_folders'])
+            self.current_movies = self.movie_scanner.cache_manager.get_cache()
+            if len(self.current_movies) == 0:
+                self.scan_movies(config['movie_folders'])
+            else:
+                self.sort_movies(self.sort_combo.currentText())
 
     def manage_folders(self):
         """管理电影文件夹"""
@@ -284,6 +289,7 @@ class MovieWallApp(QMainWindow):
 
     def refresh_movies(self):
         """刷新电影列表"""
+        self.poster_wall.clear_posters()
         try:
             config = self.config_manager.load_config()
             if config.get('movie_folders'):
