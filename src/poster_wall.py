@@ -158,6 +158,26 @@ class MoviePoster(QWidget):
         self.year_label.setAlignment(Qt.AlignCenter)
 
         self.play_button = QPushButton("播放")
+        self.play_button.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                border: 2px solid #2ecc71;
+                color: #2ecc71;
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            
+            QPushButton:hover {
+                background-color: #2ecc71;
+                color: white;
+            }
+            
+            QPushButton:pressed {
+                background-color: #27ae60;
+                border-color: #27ae60;
+            }
+        """)
         self.play_button.clicked.connect(self.play_movie)
 
         # 添加到标题容器

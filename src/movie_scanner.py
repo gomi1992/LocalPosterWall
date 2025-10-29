@@ -3,7 +3,7 @@ from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
 
-from src.cache_manager import CacheManager
+from cache_manager import CacheManager
 
 
 class MovieScanner:
