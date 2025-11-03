@@ -6,20 +6,8 @@ import subprocess
 from pathlib import Path
 from functools import lru_cache
 
-
-@lru_cache(maxsize=100)
-def load_and_scale_image(image_path, width, height):
-    """加载并缩放图片（带缓存）"""
-    image = QImage(image_path)
-    if not image.isNull():
-        return QPixmap.fromImage(
-            image.scaled(
-                QSize(width, height),
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation
-            )
-        )
-    return None
+from movie_info_dialog import MovieInfoDialog
+from load_and_scale_image import load_and_scale_image
 
 
 class RatingLabel(QLabel):
@@ -253,7 +241,8 @@ class MoviePoster(QWidget):
         """处理点击事件"""
         # if event.button() == Qt.LeftButton:
         #     self.play_movie()
-        pass
+        movie_info_dialog = MovieInfoDialog(self.movie_info)
+        movie_info_dialog.exec()
 
     def play_movie(self):
         """播放电影"""
