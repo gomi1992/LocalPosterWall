@@ -5,8 +5,11 @@ from pathlib import Path
 
 class CacheManager:
 
-    def __init__(self):
-        self.cache_file = Path.home() / '.movie_wall_cache.json'
+    def __init__(self, cache_path=None):
+        if cache_path is None:
+            self.cache_file = Path.home() / '.movie_wall_cache.json'
+        else:
+            self.cache_file = Path(cache_path)
 
     def get_cache(self):
         try:
