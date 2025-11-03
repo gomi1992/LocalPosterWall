@@ -4,6 +4,8 @@ import re
 import xml.etree.ElementTree as ET
 
 from cache_manager import CacheManager
+from movie_info import MovieInfo
+from status_message_manager import StatusMessageManager
 
 
 class MovieScanner:
@@ -30,12 +32,25 @@ class MovieScanner:
         }
 
         self.cache_manager = CacheManager()
+        self.status_bar = StatusMessageManager.instance()
 
     def _get_nfo_files(self, folder_path):
         nfo_files = list(folder_path.glob('*.nfo'))
         if not nfo_files:
             return None
         return nfo_files
+
+    def _read_nfo_contents(self, nfo_files):
+        if not nfo_files:
+            return None
+
+        nfo_path = nfo_files[0]
+        if not os.access(nfo_path, os.R_OK):
+            return None
+
+        with open(nfo_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+        return content
 
     def _read_nfo_rating(self, folder_path):
         """从 nfo 文件读取评分"""
@@ -125,6 +140,7 @@ class MovieScanner:
         return movies
 
     def _parse_movie_folder(self, folder_path):
+        # self.status_bar.status_bar.showMessage(str(folder_path), 3000)
         print(folder_path)
         """解析单个电影文件夹"""
         try:
@@ -139,6 +155,9 @@ class MovieScanner:
             nfo_files = self._get_nfo_files(folder_path)
             if nfo_files is None:
                 return None
+
+            nfo_contents = self._read_nfo_contents(nfo_files)
+            nfo_path = nfo_files[0]
 
             # 从 nfo 文件读取评分
             rating = self._read_nfo_rating(folder_path)
@@ -188,7 +207,9 @@ class MovieScanner:
                     'rating': rating,
                     'poster_path': str(poster_path) if poster_path else None,
                     'video_path': str(video_file),
-                    'resolution': resolution
+                    'resolution': resolution,
+                    'nfo_path': str(nfo_path) if nfo_path else None
+                    # 'nfo_contents': nfo_contents
                 }
 
         except Exception as e:
