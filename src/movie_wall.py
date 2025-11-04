@@ -1,5 +1,23 @@
+"""
+本地电影海报墙应用程序
+
+本模块实现了一个基于PySide6的本地电影海报墙应用程序，用于扫描本地文件夹中的电影文件，
+并以海报墙的形式展示。用户可以管理电影文件夹、配置播放器、按不同方式排序电影列表等。
+
+主要功能：
+- 扫描本地文件夹中的电影文件
+- 自动获取电影信息和海报
+- 支持多种排序方式（年份、标题等）
+- 可配置本地播放器
+- 缓存机制提高性能
+
+Author: LocalPosterWall Team
+Version: 0.0.1
+"""
+
 import sys
 import os
+import time
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                                QHBoxLayout, QPushButton, QFileDialog, QListWidget,
                                QDialog, QLabel, QDialogButtonBox, QMessageBox,
@@ -17,25 +35,122 @@ from loguru import logger
 
 from folder_list_dialog import FolderListDialog
 
-logger.add("movie_wall.log", rotation="1 day", retention=3)
+# 配置日志记录器
+# 每天轮转一次日志文件，保留3天的日志
+logger.add("movie_wall.log", rotation="1 day", retention=3, level="INFO")
 
 
 class MovieWallApp(QMainWindow):
-
+    """
+    电影海报墙主应用程序窗口类
+    
+    继承自QMainWindow，是整个应用的主界面，包含：
+    - 工具栏和菜单
+    - 电影海报墙显示区域
+    - 状态栏
+    - 各种控制功能
+    """
+    
     def __init__(self):
+        """
+        初始化电影海报墙应用程序
+        
+        创建主窗口实例，初始化各个组件和配置。
+        设置窗口基本属性，创建UI界面，并加载配置。
+        """
         super().__init__()
-        logger.info("movie wall app init")
-        self.config_manager = ConfigManager()
-        self.current_movies = []  # 存储当前显示的电影列表
-        self.init_ui()
-        self.status_bar.showMessage("init", 1000)
+        logger.info("=" * 50)
+        logger.info("正在初始化电影海报墙应用程序")
+        start_time = time.time()
+        
+        try:
+            # 初始化配置管理器
+            self.config_manager = ConfigManager()
+            logger.info("配置管理器初始化完成")
+            
+            # 存储当前显示的电影列表
+            self.current_movies = []
+            logger.info("电影列表初始化完成")
+            
+            # 初始化用户界面
+            self.init_ui()
+            
+            # 显示初始化完成消息
+            init_time = time.time() - start_time
+            logger.info(f"应用程序初始化完成，耗时: {init_time:.2f}秒")
+            self.status_bar.showMessage(f"初始化完成 - {init_time:.2f}秒", 3000)
+            
+        except Exception as e:
+            logger.exception(f"应用程序初始化失败: {str(e)}")
+            raise
 
     def init_ui(self):
-        logger.info("init ui")
-
-        self.setWindowTitle('本地电影海报墙')
+        """
+        初始化用户界面
+        
+        创建和配置主窗口的用户界面，包括：
+        - 设置窗口标题和大小
+        - 应用暗色主题样式
+        - 创建控制栏（文件夹管理、播放器配置、刷新按钮）
+        - 创建排序控制
+        - 创建海报墙显示区域
+        - 初始化状态栏
+        """
+        logger.info("正在初始化用户界面")
+        
+        # 设置窗口基本属性
+        self.setWindowTitle('本地电影海报墙 v0.0.1')
         self.setMinimumSize(1200, 800)
-        self.setStyleSheet("""
+        logger.debug("窗口基本属性设置完成")
+        
+        # 应用暗色主题样式表
+        self._apply_dark_theme()
+        logger.debug("暗色主题样式应用完成")
+        
+        # 创建主窗口部件和布局
+        main_widget = QWidget()
+        self.setCentralWidget(main_widget)
+        main_layout = QVBoxLayout(main_widget)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(10)
+        logger.debug("主布局创建完成")
+        
+        # 创建顶部控制栏
+        control_layout = self._create_control_bar()
+        main_layout.addLayout(control_layout)
+        logger.debug("控制栏创建完成")
+        
+        # 创建海报墙组件
+        self.poster_wall = PosterWall(self.config_manager)
+        main_layout.addWidget(self.poster_wall)
+        logger.debug("海报墙组件创建完成")
+        
+        # 初始化状态栏
+        self._init_status_bar()
+        logger.debug("状态栏初始化完成")
+        
+        # 初始化消息管理器
+        status_message_manager = StatusMessageManager.instance(self.status_bar)
+        logger.debug("状态消息管理器初始化完成")
+        
+        # 初始化电影扫描器
+        self.movie_scanner = MovieScanner()
+        logger.debug("电影扫描器初始化完成")
+        
+        # 加载配置并扫描电影
+        self.load_config()
+        logger.info("用户界面初始化完成")
+
+    def _apply_dark_theme(self):
+        """
+        应用暗色主题样式
+        
+        为整个应用程序设置统一的暗色主题样式，
+        包括按钮、标签、列表框等控件的外观。
+        """
+        logger.debug("应用暗色主题样式")
+        
+        theme_styles = """
             QMainWindow {
                 background-color: #1a1a1a;
             }
@@ -54,19 +169,17 @@ class MovieWallApp(QMainWindow):
                 border: none;
             }
             QComboBox::down-arrow {
-                /* 使用Unicode三角形字符代替图片 */
                 width: 12px;
                 height: 12px;
                 color: white;
                 font-size: 12px;
             }
             QComboBox::down-arrow:on {
-                /* 点击时的样式 */
                 top: 1px;
                 left: 1px;
             }
             QComboBox {
-                padding-right: 20px; /* 为下拉箭头留出空间 */
+                padding-right: 20px;
             }
             QComboBox::drop-down {
                 border: none;
@@ -78,222 +191,491 @@ class MovieWallApp(QMainWindow):
                 selection-background-color: #444;
                 border: none;
             }
-        """)
+        """
+        
+        self.setStyleSheet(theme_styles)
+        logger.debug("暗色主题样式应用成功")
 
-        # 创建主窗口部件
-        main_widget = QWidget()
-        self.setCentralWidget(main_widget)
-        main_layout = QVBoxLayout(main_widget)
-        main_layout.setContentsMargins(10, 10, 10, 10)
-        main_layout.setSpacing(10)
-
-        # 创建顶部控制栏
+    def _create_control_bar(self):
+        """
+        创建顶部控制栏
+        
+        创建包含文件夹管理、播放器配置、刷新按钮的顶部控制栏，
+        以及右侧的排序选项控制。
+        
+        Returns:
+            QHBoxLayout: 包含所有控制元素的水平布局
+        """
+        logger.debug("创建控制栏")
+        
         control_layout = QHBoxLayout()
-
+        
         # 左侧按钮组
         left_buttons = QHBoxLayout()
+        
+        # 文件夹管理按钮
         manage_folders_btn = QPushButton('管理文件夹')
         manage_folders_btn.clicked.connect(self.manage_folders)
+        manage_folders_btn.setToolTip("管理电影文件夹路径")
+        left_buttons.addWidget(manage_folders_btn)
+        logger.debug("文件夹管理按钮创建完成")
+        
+        # 播放器配置按钮
         select_player_btn = QPushButton('选择播放器')
         select_player_btn.clicked.connect(self.configure_player)
+        select_player_btn.setToolTip("配置本地视频播放器")
+        left_buttons.addWidget(select_player_btn)
+        logger.debug("播放器配置按钮创建完成")
+        
+        # 刷新列表按钮
         refresh_btn = QPushButton('刷新列表')
         refresh_btn.clicked.connect(self.refresh_movies)
-
-        left_buttons.addWidget(manage_folders_btn)
-        left_buttons.addWidget(select_player_btn)
+        refresh_btn.setToolTip("重新扫描电影文件夹")
         left_buttons.addWidget(refresh_btn)
-
+        logger.debug("刷新按钮创建完成")
+        
         # 右侧排序选项
         right_controls = QHBoxLayout()
+        
         sort_label = QLabel('排序方式：')
         sort_label.setStyleSheet('color: white;')
+        sort_label.setToolTip("选择电影的排序方式")
+        right_controls.addWidget(sort_label)
+        
         self.sort_combo = QComboBox()
         self.sort_combo.addItems(['按年份降序', '按年份升序', '按标题升序', '按标题降序'])
         self.sort_combo.currentTextChanged.connect(self.sort_movies)
-
-        right_controls.addWidget(sort_label)
+        self.sort_combo.setToolTip("选择排序方式将立即应用到当前电影列表")
         right_controls.addWidget(self.sort_combo)
-
-        # 添加到控制栏
+        logger.debug("排序控件创建完成")
+        
+        # 添加到控制栏布局
         control_layout.addLayout(left_buttons)
         control_layout.addStretch()
         control_layout.addLayout(right_controls)
+        
+        logger.debug("控制栏创建完成")
+        return control_layout
 
-        # 创建海报墙
-        self.poster_wall = PosterWall(self.config_manager)
-
+    def _init_status_bar(self):
+        """
+        初始化状态栏
+        
+        创建和配置应用程序底部状态栏，显示版本信息。
+        """
+        logger.debug("初始化状态栏")
+        
         self.status_bar = QStatusBar()
-        self.version_label = QLabel('version 0.0.1')
-        self.version_label.setStyleSheet("""
-            QListWidget {
-                background-color: #222;
-                color: white;
-                border: 1px solid #333;
-                border-radius: 4px;
-                padding: 5px;
-            }
-            QListWidget::item {
-                padding: 5px;
-                border-radius: 2px;
-            }
-            QListWidget::item:selected {
-                background-color: #444;
-            }
-            QListWidget::item:hover {
-                background-color: #333;
-            }
-            QPushButton {
-                background-color: #333;
-                color: white;
-                border: none;
-                padding: 8px 15px;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #444;
-            }
-            QLabel {
-                color: white;
-            }
-        """)
-        self.status_bar.addPermanentWidget(self.version_label)
-
-        # 添加到主布局
-        main_layout.addLayout(control_layout)
-        main_layout.addWidget(self.poster_wall)
         self.setStatusBar(self.status_bar)
-
-        status_message_manager = StatusMessageManager.instance(self.status_bar)
-
-        self.movie_scanner = MovieScanner()
-
-        # 加载配置
-        self.load_config()
+        
+        # 创建版本标签
+        self.version_label = QLabel('版本: 0.0.1')
+        self.version_label.setToolTip("本地电影海报墙版本信息")
+        self.status_bar.addPermanentWidget(self.version_label)
+        logger.debug("状态栏初始化完成")
 
     def load_config(self):
-        logger.info("loading config")
-
-        """加载配置信息"""
-        config = self.config_manager.load_config()
-        logger.debug(str(config))
-
-        if config.get('movie_folders'):
-            # self.scan_movies(config['movie_folders'])
-            self.current_movies = self.movie_scanner.cache_manager.get_cache()
-            if len(self.current_movies) == 0:
-                self.scan_movies(config['movie_folders'])
+        """
+        加载配置信息
+        
+        从配置管理器加载应用程序配置，包括：
+        - 电影文件夹路径
+        - 播放器路径
+        其他配置项
+        
+        如果存在电影文件夹配置，优先从缓存加载电影列表，
+        如果缓存为空或过期，则重新扫描文件夹。
+        """
+        logger.info("=" * 30)
+        logger.info("开始加载配置")
+        start_time = time.time()
+        
+        try:
+            # 加载配置文件
+            config = self.config_manager.load_config()
+            logger.debug(f"配置文件内容: {config}")
+            
+            # 检查是否有配置的电影文件夹
+            movie_folders = config.get('movie_folders', [])
+            
+            if movie_folders:
+                logger.info(f"找到 {len(movie_folders)} 个电影文件夹配置")
+                
+                # 尝试从缓存加载电影列表
+                logger.info("尝试从缓存加载电影列表")
+                cached_movies = self.movie_scanner.cache_manager.get_cache()
+                
+                if cached_movies and len(cached_movies) > 0:
+                    logger.info(f"缓存中找到 {len(cached_movies)} 部电影")
+                    self.current_movies = cached_movies
+                    # 应用当前选择的排序方式
+                    current_sort = self.sort_combo.currentText()
+                    logger.info(f"应用排序方式: {current_sort}")
+                    self.sort_movies(current_sort)
+                else:
+                    logger.info("缓存为空或无效，开始扫描电影文件夹")
+                    self.scan_movies(movie_folders)
             else:
-                self.sort_movies(self.sort_combo.currentText())
+                logger.warning("未找到电影文件夹配置，请用户添加文件夹")
+                self.status_bar.showMessage("请先添加电影文件夹", 3000)
+            
+            load_time = time.time() - start_time
+            logger.info(f"配置加载完成，耗时: {load_time:.2f}秒")
+            
+        except Exception as e:
+            logger.exception(f"加载配置失败: {str(e)}")
+            self.status_bar.showMessage(f"加载配置失败: {str(e)}", 5000)
 
     def manage_folders(self):
-        """管理电影文件夹"""
+        """
+        管理电影文件夹
+        
+        打开文件夹管理对话框，允许用户添加、删除、编辑电影文件夹路径。
+        用户确认后，更新配置并重新扫描电影列表。
+        """
+        logger.info("=" * 30)
+        logger.info("开始管理电影文件夹")
+        start_time = time.time()
+        
         try:
+            # 获取当前配置的文件夹
             config = self.config_manager.load_config()
-            folders = config.get('movie_folders', [])
-            dialog = FolderListDialog(folders, self)
+            current_folders = config.get('movie_folders', [])
+            logger.info(f"当前配置的文件夹数量: {len(current_folders)}")
+            
+            # 打开文件夹管理对话框
+            dialog = FolderListDialog(current_folders, self)
+            logger.info("文件夹管理对话框已打开，等待用户操作")
+            
             if dialog.exec() == QDialog.Accepted:
-                logger.info(str(dialog.folders))
-
-                self.config_manager.update_config({'movie_folders': dialog.folders})
-                self.scan_movies(dialog.folders)
+                # 用户确认了更改
+                new_folders = dialog.folders
+                logger.info(f"用户确认的新文件夹列表: {new_folders}")
+                logger.info(f"文件夹数量变化: {len(current_folders)} -> {len(new_folders)}")
+                
+                # 更新配置文件
+                self.config_manager.update_config({'movie_folders': new_folders})
+                logger.info("配置文件已更新")
+                
+                # 重新扫描电影文件夹
+                logger.info("开始重新扫描电影文件夹")
+                self.scan_movies(new_folders)
+                
+                manage_time = time.time() - start_time
+                logger.info(f"文件夹管理完成，耗时: {manage_time:.2f}秒")
+            else:
+                logger.info("用户取消了文件夹管理操作")
+                
         except Exception as e:
-            logger.exception(str(e))
+            logger.exception(f"管理文件夹失败: {str(e)}")
             QMessageBox.critical(self, '错误', f'管理文件夹失败：{str(e)}')
+            self.status_bar.showMessage("文件夹管理失败", 3000)
 
     def configure_player(self):
-        """配置播放器"""
+        """
+        配置播放器
+        
+        打开文件选择对话框，让用户选择本地视频播放器程序。
+        验证所选文件的合法性后，保存到配置中。
+        """
+        logger.info("=" * 30)
+        logger.info("开始配置播放器")
+        
         try:
-            player_path, _ = QFileDialog.getOpenFileName(
+            # 打开文件选择对话框
+            player_path, file_filter = QFileDialog.getOpenFileName(
                 self,
                 '选择视频播放器程序',
-                "",  # 起始目录为空，使用默认目录
+                "",  # 起始目录为空，使用系统默认目录
                 "可执行文件 (*.exe);;所有文件 (*.*)"
             )
+            
             if player_path:
-                # 检查文件是否存在且可执行
+                logger.info(f"用户选择的播放器路径: {player_path}")
+                logger.debug(f"文件过滤器: {file_filter}")
+                
+                # 检查文件是否存在
                 path = Path(player_path)
                 if not path.exists():
-                    logger.error('所选播放器程序不存在！' + str(path))
+                    error_msg = f"所选播放器程序不存在: {path}"
+                    logger.error(error_msg)
                     QMessageBox.warning(self, '提示', '所选播放器程序不存在！')
                     return
-                if not os.access(path, os.X_OK):
-                    logger.error('所选文件不是可执行程序！' + str(path))
-                    QMessageBox.warning(self, '提示', '所选文件不是可执行程序！')
+                    
+                if not path.is_file():
+                    error_msg = f"所选路径不是文件: {path}"
+                    logger.error(error_msg)
+                    QMessageBox.warning(self, '提示', '所选路径不是有效的文件！')
                     return
-
+                
+                # 检查文件是否可执行（在Windows上主要是检查扩展名）
+                if not path.suffix.lower() in ['.exe', '.bat', '.cmd', '.com']:
+                    logger.warning(f"文件可能不是可执行程序: {path.suffix}")
+                    
+                # 保存到配置
                 self.config_manager.update_config({'player_path': player_path})
-                logger.info('播放器设置已更新！')
-                QMessageBox.information(self, '提示', '播放器设置已更新！')
+                logger.info("播放器路径配置已保存")
+                
+                success_msg = f'播放器设置已更新！\n路径: {player_path}'
+                logger.info(success_msg)
+                QMessageBox.information(self, '提示', success_msg)
+                self.status_bar.showMessage("播放器配置已更新", 3000)
+                
+            else:
+                logger.info("用户取消了播放器选择操作")
+                
         except Exception as e:
+            logger.exception(f"配置播放器失败: {str(e)}")
             QMessageBox.critical(self, '错误', f'设置播放器失败：{str(e)}')
+            self.status_bar.showMessage("播放器配置失败", 3000)
 
     def refresh_movies(self):
-        """刷新电影列表"""
-        self.status_bar.showMessage("开始刷新电影列表", 2000)
-        self.poster_wall.clear_posters()
+        """
+        刷新电影列表
+        
+        清除当前显示的海报，重新扫描配置的电影文件夹，
+        并重新加载和排序电影列表。
+        """
+        logger.info("=" * 30)
+        logger.info("开始刷新电影列表")
+        start_time = time.time()
+        
+        # 显示开始刷新的状态消息
+        self.status_bar.showMessage("正在刷新电影列表...", 0)  # 0表示不自动消失
+        logger.info("状态栏显示: 正在刷新电影列表...")
+        
         try:
+            # 清除当前海报显示
+            logger.info("清除当前海报显示")
+            self.poster_wall.clear_posters()
+            
+            # 加载配置
             config = self.config_manager.load_config()
-            if config.get('movie_folders'):
-                self.scan_movies(config['movie_folders'])
+            movie_folders = config.get('movie_folders', [])
+            
+            if movie_folders:
+                logger.info(f"找到 {len(movie_folders)} 个电影文件夹，开始重新扫描")
+                self.scan_movies(movie_folders)
+                
+                refresh_time = time.time() - start_time
+                logger.info(f"电影列表刷新完成，耗时: {refresh_time:.2f}秒")
+                self.status_bar.showMessage(f"刷新完成 - {refresh_time:.1f}秒", 3000)
             else:
+                logger.warning("未配置电影文件夹，提示用户添加")
                 QMessageBox.information(self, '提示', '请先添加电影文件夹！')
-            self.status_bar.showMessage("刷新完成", 2000)
+                self.status_bar.showMessage("请先添加电影文件夹", 3000)
+                
         except Exception as e:
+            logger.exception(f"刷新电影列表失败: {str(e)}")
             QMessageBox.critical(self, '错误', f'刷新失败：{str(e)}')
+            self.status_bar.showMessage("刷新失败", 3000)
 
     def get_pinyin_key(self, title):
-        """获取标题的拼音首字母"""
-        # 移除括号内的内容
-        title = re.sub(r'\([^)]*\)', '', title)
-        # 获取拼音首字母
-        pinyin_list = lazy_pinyin(title)
-        return ''.join([p[0].lower() if p else '' for p in pinyin_list])
+        """
+        获取标题的拼音首字母
+        
+        用于按标题排序时，将中文标题转换为拼音首字母，
+        确保中文标题能够按拼音正确排序。
+        
+        Args:
+            title (str): 电影标题
+            
+        Returns:
+            str: 拼音首字母字符串
+        """
+        logger.debug(f"获取标题拼音: {title}")
+        
+        try:
+            # 移除括号内的内容（如年份、版本信息等）
+            clean_title = re.sub(r'\([^)]*\)', '', title).strip()
+            logger.debug(f"清理后的标题: {clean_title}")
+            
+            # 获取拼音列表
+            pinyin_list = lazy_pinyin(clean_title)
+            logger.debug(f"拼音列表: {pinyin_list}")
+            
+            # 提取首字母并转为小写
+            pinyin_key = ''.join([p[0].lower() if p else '' for p in pinyin_list])
+            logger.debug(f"拼音首字母: {pinyin_key}")
+            
+            return pinyin_key
+            
+        except Exception as e:
+            logger.exception(f"获取拼音首字母失败: {str(e)}")
+            # 如果拼音转换失败，使用原标题
+            return title.lower()
 
     def sort_movies(self, sort_method):
-        """根据选择的方法对电影进行排序"""
+        """
+        根据选择的方法对电影进行排序
+        
+        支持多种排序方式：
+        - 按年份降序/升序
+        - 按标题拼音升序/降序
+        
+        排序后自动更新海报墙显示。
+        
+        Args:
+            sort_method (str): 排序方式
+        """
+        logger.info(f"=" * 30)
+        logger.info(f"开始排序电影列表，排序方式: {sort_method}")
+        start_time = time.time()
+        
         if not self.current_movies:
+            logger.warning("当前电影列表为空，无法排序")
             return
-
-        if sort_method == '按年份降序':
-            self.current_movies.sort(
-                key=lambda x: (x.get('year', '0000'), x.get('title')),
-                reverse=True
-            )
-        elif sort_method == '按年份升序':
-            self.current_movies.sort(
-                key=lambda x: (x.get('year', '9999'), x.get('title'))
-            )
-        elif sort_method == '按标题升序':
-            self.current_movies.sort(
-                key=lambda x: self.get_pinyin_key(x['title'])
-            )
-        elif sort_method == '按标题降序':
-            self.current_movies.sort(
-                key=lambda x: self.get_pinyin_key(x['title']),
-                reverse=True
-            )
-
-        # 更新显示
-        self.poster_wall.update_posters(self.current_movies)
+        
+        logger.info(f"待排序电影数量: {len(self.current_movies)}")
+        
+        try:
+            if sort_method == '按年份降序':
+                logger.debug("使用年份降序排序")
+                self.current_movies.sort(
+                    key=lambda x: (x.get('year', '0000'), x.get('title', '')),
+                    reverse=True
+                )
+            elif sort_method == '按年份升序':
+                logger.debug("使用年份升序排序")
+                self.current_movies.sort(
+                    key=lambda x: (x.get('year', '9999'), x.get('title', ''))
+                )
+            elif sort_method == '按标题升序':
+                logger.debug("使用标题拼音升序排序")
+                self.current_movies.sort(
+                    key=lambda x: self.get_pinyin_key(x.get('title', ''))
+                )
+            elif sort_method == '按标题降序':
+                logger.debug("使用标题拼音降序排序")
+                self.current_movies.sort(
+                    key=lambda x: self.get_pinyin_key(x.get('title', '')),
+                    reverse=True
+                )
+            else:
+                logger.warning(f"未知的排序方式: {sort_method}")
+                return
+            
+            # 更新海报墙显示
+            logger.info("排序完成，更新海报墙显示")
+            self.poster_wall.update_posters(self.current_movies)
+            
+            sort_time = time.time() - start_time
+            logger.info(f"排序完成，耗时: {sort_time:.3f}秒")
+            
+            # 更新状态栏
+            movie_count = len(self.current_movies)
+            self.status_bar.showMessage(f"已排序 {movie_count} 部电影 - {sort_method}", 2000)
+            
+        except Exception as e:
+            logger.exception(f"排序电影列表失败: {str(e)}")
+            self.status_bar.showMessage("排序失败", 3000)
 
     def scan_movies(self, folders):
-        """扫描多个电影文件夹"""
+        """
+        扫描多个电影文件夹
+        
+        扫描指定的所有文件夹，收集电影信息，并缓存结果。
+        扫描完成后自动应用当前选择的排序方式。
+        
+        Args:
+            folders (list): 电影文件夹路径列表
+        """
+        logger.info("=" * 40)
+        logger.info(f"开始扫描电影文件夹，共 {len(folders)} 个文件夹")
+        start_time = time.time()
+        
         try:
             all_movies = []
-            for folder in folders:
-                movies = self.movie_scanner.scan_folder(folder)
-                all_movies.extend(movies)
-
+            folder_count = len(folders)
+            
+            # 逐个扫描文件夹
+            for i, folder in enumerate(folders, 1):
+                logger.info(f"正在扫描第 {i}/{folder_count} 个文件夹: {folder}")
+                
+                try:
+                    # 扫描单个文件夹
+                    movies = self.movie_scanner.scan_folder(folder)
+                    all_movies.extend(movies)
+                    
+                    logger.info(f"文件夹 '{folder}' 扫描完成，找到 {len(movies)} 部电影")
+                    
+                except Exception as e:
+                    logger.exception(f"扫描文件夹失败 '{folder}': {str(e)}")
+                    # 继续扫描其他文件夹，不中断整个过程
+            
+            # 更新电影列表
             self.current_movies = all_movies
+            total_movies = len(all_movies)
+            
+            logger.info(f"所有文件夹扫描完成，总共找到 {total_movies} 部电影")
+            
             # 应用当前选择的排序方式
-            self.sort_movies(self.sort_combo.currentText())
+            current_sort = self.sort_combo.currentText()
+            logger.info(f"应用排序方式: {current_sort}")
+            self.sort_movies(current_sort)
+            
+            scan_time = time.time() - start_time
+            logger.info(f"电影扫描完成，总耗时: {scan_time:.2f}秒")
+            logger.info(f"平均每部电影扫描耗时: {scan_time/max(total_movies, 1):.3f}秒")
+            
+            # 更新状态栏
+            if total_movies > 0:
+                self.status_bar.showMessage(f"扫描完成：{total_movies} 部电影 - {scan_time:.1f}秒", 5000)
+            else:
+                self.status_bar.showMessage("未找到电影文件，请检查文件夹设置", 5000)
+            
         except Exception as e:
+            logger.exception(f"扫描电影文件夹失败: {str(e)}")
             QMessageBox.critical(self, '错误', f'扫描文件夹失败：{str(e)}')
+            self.status_bar.showMessage("扫描失败", 3000)
+
+
+def main():
+    """
+    程序入口函数
+    
+    创建QApplication实例，设置应用程序样式，
+    创建并显示主窗口，启动事件循环。
+    """
+    logger.info("=" * 50)
+    logger.info("启动本地电影海报墙应用程序")
+    start_time = time.time()
+    
+    try:
+        # 创建应用程序实例
+        app = QApplication(sys.argv)
+        logger.info("QApplication 创建成功")
+        
+        # 设置应用程序样式
+        app.setStyle('Fusion')
+        logger.info("应用程序样式设置为 Fusion")
+        
+        # 创建主窗口
+        window = MovieWallApp()
+        logger.info("主窗口创建成功")
+        
+        # 显示主窗口
+        window.show()
+        logger.info("主窗口已显示")
+        
+        startup_time = time.time() - start_time
+        logger.info(f"应用程序启动完成，总耗时: {startup_time:.2f}秒")
+        logger.info("=" * 50)
+        
+        # 启动事件循环
+        sys.exit(app.exec())
+        
+    except Exception as e:
+        logger.exception(f"应用程序启动失败: {str(e)}")
+        # 如果是在交互式环境中，显示错误对话框
+        if hasattr(sys, 'ps1') or not sys.stderr.isatty():
+            try:
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.critical(None, '启动错误', f'应用程序启动失败：\n{str(e)}')
+            except:
+                pass
+        sys.exit(1)
 
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    app.setStyle('Fusion')  # 使用 Fusion 风格
-    window = MovieWallApp()
-    window.show()
-    sys.exit(app.exec())
+    main()
