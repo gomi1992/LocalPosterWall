@@ -35,9 +35,10 @@ from loguru import logger
 
 from folder_list_dialog import FolderListDialog
 
+
 # 配置日志记录器
 # 每天轮转一次日志文件，保留3天的日志
-logger.add("movie_wall.log", rotation="1 day", retention=3, level="INFO")
+# logger.add("movie_wall.log", rotation="1 day", retention=3, level="INFO")
 
 
 class MovieWallApp(QMainWindow):
@@ -50,7 +51,7 @@ class MovieWallApp(QMainWindow):
     - 状态栏
     - 各种控制功能
     """
-    
+
     def __init__(self):
         """
         初始化电影海报墙应用程序
@@ -62,24 +63,24 @@ class MovieWallApp(QMainWindow):
         logger.info("=" * 50)
         logger.info("正在初始化电影海报墙应用程序")
         start_time = time.time()
-        
+
         try:
             # 初始化配置管理器
             self.config_manager = ConfigManager()
             logger.info("配置管理器初始化完成")
-            
+
             # 存储当前显示的电影列表
             self.current_movies = []
             logger.info("电影列表初始化完成")
-            
+
             # 初始化用户界面
             self.init_ui()
-            
+
             # 显示初始化完成消息
             init_time = time.time() - start_time
             logger.info(f"应用程序初始化完成，耗时: {init_time:.2f}秒")
             self.status_bar.showMessage(f"初始化完成 - {init_time:.2f}秒", 3000)
-            
+
         except Exception as e:
             logger.exception(f"应用程序初始化失败: {str(e)}")
             raise
@@ -97,16 +98,16 @@ class MovieWallApp(QMainWindow):
         - 初始化状态栏
         """
         logger.info("正在初始化用户界面")
-        
+
         # 设置窗口基本属性
         self.setWindowTitle('本地电影海报墙 v0.0.1')
         self.setMinimumSize(1200, 800)
         logger.debug("窗口基本属性设置完成")
-        
+
         # 应用暗色主题样式表
         self._apply_dark_theme()
         logger.debug("暗色主题样式应用完成")
-        
+
         # 创建主窗口部件和布局
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
@@ -114,29 +115,29 @@ class MovieWallApp(QMainWindow):
         main_layout.setContentsMargins(10, 10, 10, 10)
         main_layout.setSpacing(10)
         logger.debug("主布局创建完成")
-        
+
         # 创建顶部控制栏
         control_layout = self._create_control_bar()
         main_layout.addLayout(control_layout)
         logger.debug("控制栏创建完成")
-        
+
         # 创建海报墙组件
         self.poster_wall = PosterWall(self.config_manager)
         main_layout.addWidget(self.poster_wall)
         logger.debug("海报墙组件创建完成")
-        
+
         # 初始化状态栏
         self._init_status_bar()
         logger.debug("状态栏初始化完成")
-        
+
         # 初始化消息管理器
         status_message_manager = StatusMessageManager.instance(self.status_bar)
         logger.debug("状态消息管理器初始化完成")
-        
+
         # 初始化电影扫描器
         self.movie_scanner = MovieScanner()
         logger.debug("电影扫描器初始化完成")
-        
+
         # 加载配置并扫描电影
         self.load_config()
         logger.info("用户界面初始化完成")
@@ -149,7 +150,7 @@ class MovieWallApp(QMainWindow):
         包括按钮、标签、列表框等控件的外观。
         """
         logger.debug("应用暗色主题样式")
-        
+
         theme_styles = """
             QMainWindow {
                 background-color: #1a1a1a;
@@ -192,7 +193,7 @@ class MovieWallApp(QMainWindow):
                 border: none;
             }
         """
-        
+
         self.setStyleSheet(theme_styles)
         logger.debug("暗色主题样式应用成功")
 
@@ -207,53 +208,53 @@ class MovieWallApp(QMainWindow):
             QHBoxLayout: 包含所有控制元素的水平布局
         """
         logger.debug("创建控制栏")
-        
+
         control_layout = QHBoxLayout()
-        
+
         # 左侧按钮组
         left_buttons = QHBoxLayout()
-        
+
         # 文件夹管理按钮
         manage_folders_btn = QPushButton('管理文件夹')
         manage_folders_btn.clicked.connect(self.manage_folders)
         manage_folders_btn.setToolTip("管理电影文件夹路径")
         left_buttons.addWidget(manage_folders_btn)
         logger.debug("文件夹管理按钮创建完成")
-        
+
         # 播放器配置按钮
         select_player_btn = QPushButton('选择播放器')
         select_player_btn.clicked.connect(self.configure_player)
         select_player_btn.setToolTip("配置本地视频播放器")
         left_buttons.addWidget(select_player_btn)
         logger.debug("播放器配置按钮创建完成")
-        
+
         # 刷新列表按钮
         refresh_btn = QPushButton('刷新列表')
         refresh_btn.clicked.connect(self.refresh_movies)
         refresh_btn.setToolTip("重新扫描电影文件夹")
         left_buttons.addWidget(refresh_btn)
         logger.debug("刷新按钮创建完成")
-        
+
         # 右侧排序选项
         right_controls = QHBoxLayout()
-        
+
         sort_label = QLabel('排序方式：')
         sort_label.setStyleSheet('color: white;')
         sort_label.setToolTip("选择电影的排序方式")
         right_controls.addWidget(sort_label)
-        
+
         self.sort_combo = QComboBox()
         self.sort_combo.addItems(['按年份降序', '按年份升序', '按标题升序', '按标题降序'])
         self.sort_combo.currentTextChanged.connect(self.sort_movies)
         self.sort_combo.setToolTip("选择排序方式将立即应用到当前电影列表")
         right_controls.addWidget(self.sort_combo)
         logger.debug("排序控件创建完成")
-        
+
         # 添加到控制栏布局
         control_layout.addLayout(left_buttons)
         control_layout.addStretch()
         control_layout.addLayout(right_controls)
-        
+
         logger.debug("控制栏创建完成")
         return control_layout
 
@@ -264,10 +265,34 @@ class MovieWallApp(QMainWindow):
         创建和配置应用程序底部状态栏，显示版本信息。
         """
         logger.debug("初始化状态栏")
-        
+
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
-        
+        self.status_bar.setStyleSheet("""
+        QLabel {
+                color: white;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
+                    stop:0 rgba(0, 0, 0, 0.9), 
+                    stop:1 rgba(0, 0, 0, 0.6));
+                padding: 3px 8px;
+                border-radius: 6px;
+                font-size: 16px;
+                font-weight: bold;
+                font-family: "Segoe UI", Arial;
+            }
+            QStatusBar { 
+             color: white;
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
+                    stop:0 rgba(0, 0, 0, 0.9), 
+                    stop:1 rgba(0, 0, 0, 0.6));
+                padding: 3px 8px;
+                border-radius: 6px;
+                font-size: 16px;
+                font-weight: bold;
+                font-family: "Segoe UI", Arial;
+             }
+        """)
+
         # 创建版本标签
         self.version_label = QLabel('版本: 0.0.1')
         self.version_label.setToolTip("本地电影海报墙版本信息")
@@ -289,22 +314,22 @@ class MovieWallApp(QMainWindow):
         logger.info("=" * 30)
         logger.info("开始加载配置")
         start_time = time.time()
-        
+
         try:
             # 加载配置文件
             config = self.config_manager.load_config()
             logger.debug(f"配置文件内容: {config}")
-            
+
             # 检查是否有配置的电影文件夹
             movie_folders = config.get('movie_folders', [])
-            
+
             if movie_folders:
                 logger.info(f"找到 {len(movie_folders)} 个电影文件夹配置")
-                
+
                 # 尝试从缓存加载电影列表
                 logger.info("尝试从缓存加载电影列表")
                 cached_movies = self.movie_scanner.cache_manager.get_cache()
-                
+
                 if cached_movies and len(cached_movies) > 0:
                     logger.info(f"缓存中找到 {len(cached_movies)} 部电影")
                     self.current_movies = cached_movies
@@ -318,10 +343,10 @@ class MovieWallApp(QMainWindow):
             else:
                 logger.warning("未找到电影文件夹配置，请用户添加文件夹")
                 self.status_bar.showMessage("请先添加电影文件夹", 3000)
-            
+
             load_time = time.time() - start_time
             logger.info(f"配置加载完成，耗时: {load_time:.2f}秒")
-            
+
         except Exception as e:
             logger.exception(f"加载配置失败: {str(e)}")
             self.status_bar.showMessage(f"加载配置失败: {str(e)}", 5000)
@@ -336,36 +361,36 @@ class MovieWallApp(QMainWindow):
         logger.info("=" * 30)
         logger.info("开始管理电影文件夹")
         start_time = time.time()
-        
+
         try:
             # 获取当前配置的文件夹
             config = self.config_manager.load_config()
             current_folders = config.get('movie_folders', [])
             logger.info(f"当前配置的文件夹数量: {len(current_folders)}")
-            
+
             # 打开文件夹管理对话框
             dialog = FolderListDialog(current_folders, self)
             logger.info("文件夹管理对话框已打开，等待用户操作")
-            
+
             if dialog.exec() == QDialog.Accepted:
                 # 用户确认了更改
                 new_folders = dialog.folders
                 logger.info(f"用户确认的新文件夹列表: {new_folders}")
                 logger.info(f"文件夹数量变化: {len(current_folders)} -> {len(new_folders)}")
-                
+
                 # 更新配置文件
                 self.config_manager.update_config({'movie_folders': new_folders})
                 logger.info("配置文件已更新")
-                
+
                 # 重新扫描电影文件夹
                 logger.info("开始重新扫描电影文件夹")
                 self.scan_movies(new_folders)
-                
+
                 manage_time = time.time() - start_time
                 logger.info(f"文件夹管理完成，耗时: {manage_time:.2f}秒")
             else:
                 logger.info("用户取消了文件夹管理操作")
-                
+
         except Exception as e:
             logger.exception(f"管理文件夹失败: {str(e)}")
             QMessageBox.critical(self, '错误', f'管理文件夹失败：{str(e)}')
@@ -380,7 +405,7 @@ class MovieWallApp(QMainWindow):
         """
         logger.info("=" * 30)
         logger.info("开始配置播放器")
-        
+
         try:
             # 打开文件选择对话框
             player_path, file_filter = QFileDialog.getOpenFileName(
@@ -389,11 +414,11 @@ class MovieWallApp(QMainWindow):
                 "",  # 起始目录为空，使用系统默认目录
                 "可执行文件 (*.exe);;所有文件 (*.*)"
             )
-            
+
             if player_path:
                 logger.info(f"用户选择的播放器路径: {player_path}")
                 logger.debug(f"文件过滤器: {file_filter}")
-                
+
                 # 检查文件是否存在
                 path = Path(player_path)
                 if not path.exists():
@@ -401,29 +426,29 @@ class MovieWallApp(QMainWindow):
                     logger.error(error_msg)
                     QMessageBox.warning(self, '提示', '所选播放器程序不存在！')
                     return
-                    
+
                 if not path.is_file():
                     error_msg = f"所选路径不是文件: {path}"
                     logger.error(error_msg)
                     QMessageBox.warning(self, '提示', '所选路径不是有效的文件！')
                     return
-                
+
                 # 检查文件是否可执行（在Windows上主要是检查扩展名）
                 if not path.suffix.lower() in ['.exe', '.bat', '.cmd', '.com']:
                     logger.warning(f"文件可能不是可执行程序: {path.suffix}")
-                    
+
                 # 保存到配置
                 self.config_manager.update_config({'player_path': player_path})
                 logger.info("播放器路径配置已保存")
-                
+
                 success_msg = f'播放器设置已更新！\n路径: {player_path}'
                 logger.info(success_msg)
                 QMessageBox.information(self, '提示', success_msg)
                 self.status_bar.showMessage("播放器配置已更新", 3000)
-                
+
             else:
                 logger.info("用户取消了播放器选择操作")
-                
+
         except Exception as e:
             logger.exception(f"配置播放器失败: {str(e)}")
             QMessageBox.critical(self, '错误', f'设置播放器失败：{str(e)}')
@@ -439,24 +464,24 @@ class MovieWallApp(QMainWindow):
         logger.info("=" * 30)
         logger.info("开始刷新电影列表")
         start_time = time.time()
-        
+
         # 显示开始刷新的状态消息
         self.status_bar.showMessage("正在刷新电影列表...", 0)  # 0表示不自动消失
         logger.info("状态栏显示: 正在刷新电影列表...")
-        
+
         try:
             # 清除当前海报显示
             logger.info("清除当前海报显示")
             self.poster_wall.clear_posters()
-            
+
             # 加载配置
             config = self.config_manager.load_config()
             movie_folders = config.get('movie_folders', [])
-            
+
             if movie_folders:
                 logger.info(f"找到 {len(movie_folders)} 个电影文件夹，开始重新扫描")
                 self.scan_movies(movie_folders)
-                
+
                 refresh_time = time.time() - start_time
                 logger.info(f"电影列表刷新完成，耗时: {refresh_time:.2f}秒")
                 self.status_bar.showMessage(f"刷新完成 - {refresh_time:.1f}秒", 3000)
@@ -464,7 +489,7 @@ class MovieWallApp(QMainWindow):
                 logger.warning("未配置电影文件夹，提示用户添加")
                 QMessageBox.information(self, '提示', '请先添加电影文件夹！')
                 self.status_bar.showMessage("请先添加电影文件夹", 3000)
-                
+
         except Exception as e:
             logger.exception(f"刷新电影列表失败: {str(e)}")
             QMessageBox.critical(self, '错误', f'刷新失败：{str(e)}')
@@ -484,22 +509,22 @@ class MovieWallApp(QMainWindow):
             str: 拼音首字母字符串
         """
         logger.debug(f"获取标题拼音: {title}")
-        
+
         try:
             # 移除括号内的内容（如年份、版本信息等）
             clean_title = re.sub(r'\([^)]*\)', '', title).strip()
             logger.debug(f"清理后的标题: {clean_title}")
-            
+
             # 获取拼音列表
             pinyin_list = lazy_pinyin(clean_title)
             logger.debug(f"拼音列表: {pinyin_list}")
-            
+
             # 提取首字母并转为小写
             pinyin_key = ''.join([p[0].lower() if p else '' for p in pinyin_list])
             logger.debug(f"拼音首字母: {pinyin_key}")
-            
+
             return pinyin_key
-            
+
         except Exception as e:
             logger.exception(f"获取拼音首字母失败: {str(e)}")
             # 如果拼音转换失败，使用原标题
@@ -521,13 +546,13 @@ class MovieWallApp(QMainWindow):
         logger.info(f"=" * 30)
         logger.info(f"开始排序电影列表，排序方式: {sort_method}")
         start_time = time.time()
-        
+
         if not self.current_movies:
             logger.warning("当前电影列表为空，无法排序")
             return
-        
+
         logger.info(f"待排序电影数量: {len(self.current_movies)}")
-        
+
         try:
             if sort_method == '按年份降序':
                 logger.debug("使用年份降序排序")
@@ -554,18 +579,18 @@ class MovieWallApp(QMainWindow):
             else:
                 logger.warning(f"未知的排序方式: {sort_method}")
                 return
-            
+
             # 更新海报墙显示
             logger.info("排序完成，更新海报墙显示")
             self.poster_wall.update_posters(self.current_movies)
-            
+
             sort_time = time.time() - start_time
             logger.info(f"排序完成，耗时: {sort_time:.3f}秒")
-            
+
             # 更新状态栏
             movie_count = len(self.current_movies)
             self.status_bar.showMessage(f"已排序 {movie_count} 部电影 - {sort_method}", 2000)
-            
+
         except Exception as e:
             logger.exception(f"排序电影列表失败: {str(e)}")
             self.status_bar.showMessage("排序失败", 3000)
@@ -583,47 +608,47 @@ class MovieWallApp(QMainWindow):
         logger.info("=" * 40)
         logger.info(f"开始扫描电影文件夹，共 {len(folders)} 个文件夹")
         start_time = time.time()
-        
+
         try:
             all_movies = []
             folder_count = len(folders)
-            
+
             # 逐个扫描文件夹
             for i, folder in enumerate(folders, 1):
                 logger.info(f"正在扫描第 {i}/{folder_count} 个文件夹: {folder}")
-                
+
                 try:
                     # 扫描单个文件夹
                     movies = self.movie_scanner.scan_folder(folder)
                     all_movies.extend(movies)
-                    
+
                     logger.info(f"文件夹 '{folder}' 扫描完成，找到 {len(movies)} 部电影")
-                    
+
                 except Exception as e:
                     logger.exception(f"扫描文件夹失败 '{folder}': {str(e)}")
                     # 继续扫描其他文件夹，不中断整个过程
-            
+
             # 更新电影列表
             self.current_movies = all_movies
             total_movies = len(all_movies)
-            
+
             logger.info(f"所有文件夹扫描完成，总共找到 {total_movies} 部电影")
-            
+
             # 应用当前选择的排序方式
             current_sort = self.sort_combo.currentText()
             logger.info(f"应用排序方式: {current_sort}")
             self.sort_movies(current_sort)
-            
+
             scan_time = time.time() - start_time
             logger.info(f"电影扫描完成，总耗时: {scan_time:.2f}秒")
-            logger.info(f"平均每部电影扫描耗时: {scan_time/max(total_movies, 1):.3f}秒")
-            
+            logger.info(f"平均每部电影扫描耗时: {scan_time / max(total_movies, 1):.3f}秒")
+
             # 更新状态栏
             if total_movies > 0:
                 self.status_bar.showMessage(f"扫描完成：{total_movies} 部电影 - {scan_time:.1f}秒", 5000)
             else:
                 self.status_bar.showMessage("未找到电影文件，请检查文件夹设置", 5000)
-            
+
         except Exception as e:
             logger.exception(f"扫描电影文件夹失败: {str(e)}")
             QMessageBox.critical(self, '错误', f'扫描文件夹失败：{str(e)}')
@@ -640,31 +665,31 @@ def main():
     logger.info("=" * 50)
     logger.info("启动本地电影海报墙应用程序")
     start_time = time.time()
-    
+
     try:
         # 创建应用程序实例
         app = QApplication(sys.argv)
         logger.info("QApplication 创建成功")
-        
+
         # 设置应用程序样式
         app.setStyle('Fusion')
         logger.info("应用程序样式设置为 Fusion")
-        
+
         # 创建主窗口
         window = MovieWallApp()
         logger.info("主窗口创建成功")
-        
+
         # 显示主窗口
         window.show()
         logger.info("主窗口已显示")
-        
+
         startup_time = time.time() - start_time
         logger.info(f"应用程序启动完成，总耗时: {startup_time:.2f}秒")
         logger.info("=" * 50)
-        
+
         # 启动事件循环
         sys.exit(app.exec())
-        
+
     except Exception as e:
         logger.exception(f"应用程序启动失败: {str(e)}")
         # 如果是在交互式环境中，显示错误对话框
