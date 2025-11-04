@@ -12,6 +12,8 @@
 - video_path: 视频文件路径
 - resolution: 视频分辨率
 - nfo_path: NFO信息文件路径
+- director: 导演信息
+- actors: 演员信息列表
 
 Author: LocalPosterWall Team
 Version: 0.0.1
@@ -31,7 +33,7 @@ class MovieInfo:
     主要用于在不同模块间传递电影信息。
     """
     
-    def __init__(self, title, year, rating, poster_path, video_path, resolution, nfo_path):
+    def __init__(self, title, year, rating, poster_path, video_path, resolution, nfo_path, director=None, actors=None):
         """
         初始化电影信息对象
         
@@ -43,6 +45,8 @@ class MovieInfo:
             video_path (str): 视频文件路径
             resolution (str): 视频分辨率信息
             nfo_path (str): NFO信息文件路径
+            director (str): 导演信息
+            actors (list): 演员信息列表
         """
         logger.debug(f"创建电影信息对象: {title} ({year})")
         
@@ -74,6 +78,14 @@ class MovieInfo:
         self.nfo_path = nfo_path
         logger.debug(f"设置NFO文件路径: {nfo_path}")
         
+        # 导演信息
+        self.director = director
+        logger.debug(f"设置导演信息: {director}")
+        
+        # 演员信息
+        self.actors = actors or []
+        logger.debug(f"设置演员信息: {self.actors}")
+        
         logger.info(f"电影信息对象创建完成: {title}")
     
     def __str__(self):
@@ -83,7 +95,7 @@ class MovieInfo:
         Returns:
             str: 格式化的电影信息字符串
         """
-        return f"{self.title} ({self.year}) - 评分: {self.rating}"
+        return f"{self.title} ({year}) - 评分: {rating}"
     
     def __repr__(self):
         """
@@ -95,7 +107,8 @@ class MovieInfo:
         return (f"MovieInfo(title='{self.title}', year='{self.year}', "
                 f"rating={self.rating}, poster_path='{self.poster_path}', "
                 f"video_path='{self.video_path}', resolution='{self.resolution}', "
-                f"nfo_path='{self.nfo_path}')")
+                f"nfo_path='{self.nfo_path}', director='{self.director}', "
+                f"actors={self.actors})")
     
     def to_dict(self):
         """
@@ -113,7 +126,9 @@ class MovieInfo:
             'poster_path': self.poster_path,
             'video_path': self.video_path,
             'resolution': self.resolution,
-            'nfo_path': self.nfo_path
+            'nfo_path': self.nfo_path,
+            'director': self.director,
+            'actors': self.actors
         }
     
     @classmethod
@@ -137,7 +152,9 @@ class MovieInfo:
                 poster_path=data.get('poster_path', ''),
                 video_path=data.get('video_path', ''),
                 resolution=data.get('resolution', ''),
-                nfo_path=data.get('nfo_path', '')
+                nfo_path=data.get('nfo_path', ''),
+                director=data.get('director'),
+                actors=data.get('actors', [])
             )
             
             logger.info(f"从字典创建电影信息成功: {movie_info.title}")
@@ -160,7 +177,9 @@ class MovieInfo:
             'title': self.title,
             'year': self.year,
             'rating': self.rating,
-            'resolution': self.resolution
+            'resolution': self.resolution,
+            'director': self.director,
+            'actors': self.actors
         }
     
     def has_valid_files(self):

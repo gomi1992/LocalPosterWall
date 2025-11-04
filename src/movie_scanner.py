@@ -222,6 +222,89 @@ class MovieScanner:
             logger.exception(f"读取NFO评分失败: {str(e)}")
             return None
 
+    def _read_nfo_credits(self, folder_path):
+        """
+        从NFO文件读取导演和演员信息
+        
+        解析NFO文件XML格式，提取电影导演和演员信息。
+        
+        Args:
+            folder_path (Path): 电影文件夹路径
+            
+        Returns:
+            dict: 包含director和actors的字典，如果无法解析则返回None
+        """
+        logger.debug(f"从NFO文件读取导演和演员信息: {folder_path}")
+        
+        try:
+            # 查找NFO文件
+            nfo_files = list(folder_path.glob('*.nfo'))
+            if not nfo_files:
+                logger.debug("未找到NFO文件，无法读取导演和演员信息")
+                return None
+
+            # 读取第一个NFO文件
+            nfo_path = nfo_files[0]
+            logger.debug(f"解析NFO文件: {nfo_path}")
+            
+            if not os.access(nfo_path, os.R_OK):
+                logger.warning(f"NFO文件不可读: {nfo_path}")
+                return None
+
+            # 解析XML
+            logger.debug("开始解析XML")
+            tree = ET.parse(nfo_path)
+            root = tree.getroot()
+            logger.debug("XML解析完成")
+
+            # 读取导演信息
+            directors = []
+            director_elements = root.findall('.//director')
+            for director_elem in director_elements:
+                if director_elem.text and director_elem.text.strip():
+                    director_name = director_elem.text.strip()
+                    directors.append(director_name)
+                    logger.debug(f"找到导演: {director_name}")
+
+            # 读取演员信息
+            actors = []
+            # 查找actor标签下的name子标签
+            actor_elements = root.findall('.//actor')
+            for actor_elem in actor_elements:
+                name_elem = actor_elem.find('name')
+                if name_elem is not None and name_elem.text and name_elem.text.strip():
+                    actor_name = name_elem.text.strip()
+                    actors.append(actor_name)
+                    logger.debug(f"找到演员: {actor_name}")
+            
+            # 如果没有找到name标签下的演员，尝试直接读取actor标签的文本
+            if not actors:
+                actor_elements = root.findall('.//actor')
+                for actor_elem in actor_elements:
+                    if actor_elem.text and actor_elem.text.strip():
+                        actor_name = actor_elem.text.strip()
+                        if actor_name not in actors:  # 避免重复
+                            actors.append(actor_name)
+                            logger.debug(f"找到演员(直接文本): {actor_name}")
+
+            result = {
+                'director': directors,
+                'actors': actors
+            }
+            
+            logger.info(f"成功解析导演和演员信息:")
+            logger.info(f"  导演: {directors}")
+            logger.info(f"  演员数量: {len(actors)}")
+            
+            return result
+            
+        except ET.ParseError as e:
+            logger.exception(f"NFO文件XML解析失败: {str(e)}")
+            return None
+        except Exception as e:
+            logger.exception(f"读取NFO导演和演员信息失败: {str(e)}")
+            return None
+
     def scan_folder(self, folder_path):
         """
         扫描电影文件夹
@@ -384,6 +467,14 @@ class MovieScanner:
             else:
                 logger.debug("未获取到评分信息")
             
+            # 从NFO文件读取导演和演员信息
+            logger.debug("从NFO文件读取导演和演员信息")
+            credits = self._read_nfo_credits(folder_path)
+            if credits:
+                logger.debug(f"获取到导演和演员信息: {credits}")
+            else:
+                logger.debug("未获取到导演和演员信息")
+            
             # 查找海报文件
             logger.debug("查找海报文件")
             poster_path = self._find_poster_file(folder_path)
@@ -410,6 +501,8 @@ class MovieScanner:
                 'title': title,
                 'year': year,
                 'rating': rating,
+                'director': credits['director'] if credits else [],
+                'actors': credits['actors'] if credits else [],
                 'poster_path': str(poster_path) if poster_path else None,
                 'video_path': str(video_file),
                 'resolution': resolution,
