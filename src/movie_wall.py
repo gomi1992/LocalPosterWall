@@ -244,7 +244,7 @@ class MovieWallApp(QMainWindow):
         right_controls.addWidget(sort_label)
 
         self.sort_combo = QComboBox()
-        self.sort_combo.addItems(['按年份降序', '按年份升序', '按标题升序', '按标题降序'])
+        self.sort_combo.addItems(['按年份降序', '按年份升序', '按标题升序', '按标题降序', '按导演升序', '按导演降序', '按演员升序', '按演员降序'])
         self.sort_combo.currentTextChanged.connect(self.sort_movies)
         self.sort_combo.setToolTip("选择排序方式将立即应用到当前电影列表")
         right_controls.addWidget(self.sort_combo)
@@ -499,22 +499,38 @@ class MovieWallApp(QMainWindow):
         """
         获取标题的拼音首字母
         
-        用于按标题排序时，将中文标题转换为拼音首字母，
-        确保中文标题能够按拼音正确排序。
+        用于按标题、导演或演员排序时，将中文转换为拼音首字母，
+        确保中文能够按拼音正确排序。
         
         Args:
-            title (str): 电影标题
+            title: 可以是字符串(标题、导演)或列表(演员列表)
             
         Returns:
             str: 拼音首字母字符串
         """
-        logger.debug(f"获取标题拼音: {title}")
+        logger.debug(f"获取拼音: {title}")
 
         try:
+            # 处理列表类型（如演员列表）
+            if isinstance(title, list):
+                # 如果是列表且非空，使用第一个元素
+                if title:
+                    title = title[0]
+                else:
+                    return ''
+            
+            # 确保是字符串类型
+            if not isinstance(title, str):
+                title = str(title)
+            
             # 移除括号内的内容（如年份、版本信息等）
             clean_title = re.sub(r'\([^)]*\)', '', title).strip()
-            logger.debug(f"清理后的标题: {clean_title}")
+            logger.debug(f"清理后的文本: {clean_title}")
 
+            # 如果清理后为空，返回空字符串
+            if not clean_title:
+                return ''
+            
             # 获取拼音列表
             pinyin_list = lazy_pinyin(clean_title)
             logger.debug(f"拼音列表: {pinyin_list}")
@@ -527,8 +543,8 @@ class MovieWallApp(QMainWindow):
 
         except Exception as e:
             logger.exception(f"获取拼音首字母失败: {str(e)}")
-            # 如果拼音转换失败，使用原标题
-            return title.lower()
+            # 如果拼音转换失败，使用空字符串
+            return ''
 
     def sort_movies(self, sort_method):
         """
@@ -574,6 +590,28 @@ class MovieWallApp(QMainWindow):
                 logger.debug("使用标题拼音降序排序")
                 self.current_movies.sort(
                     key=lambda x: self.get_pinyin_key(x.get('title', '')),
+                    reverse=True
+                )
+            elif sort_method == '按导演升序':
+                logger.debug("使用导演拼音升序排序")
+                self.current_movies.sort(
+                    key=lambda x: self.get_pinyin_key(x.get('director', '') or '')
+                )
+            elif sort_method == '按导演降序':
+                logger.debug("使用导演拼音降序排序")
+                self.current_movies.sort(
+                    key=lambda x: self.get_pinyin_key(x.get('director', '') or ''),
+                    reverse=True
+                )
+            elif sort_method == '按演员升序':
+                logger.debug("使用演员拼音升序排序")
+                self.current_movies.sort(
+                    key=lambda x: self.get_pinyin_key(x.get('actors', []))
+                )
+            elif sort_method == '按演员降序':
+                logger.debug("使用演员拼音降序排序")
+                self.current_movies.sort(
+                    key=lambda x: self.get_pinyin_key(x.get('actors', [])),
                     reverse=True
                 )
             else:
