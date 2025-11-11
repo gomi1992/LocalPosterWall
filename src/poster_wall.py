@@ -351,10 +351,19 @@ class MoviePoster(QWidget):
         logger.debug("电影导演标签创建完成")
 
         # 电影演员
-        actor = self.movie_info.get('actor', 'Unknown')
-        logger.debug(f"设置电影演员: {actor}")
+        actors = self.movie_info.get('actors', [])
+        logger.debug(f"设置电影演员: {actors}")
+        
+        # 处理演员列表
+        if isinstance(actors, list):
+            actor_text = ', '.join(actors[:3])  # 最多显示前3个演员
+            # 如果演员数量超过3个，添加省略号
+            if len(actors) > 3:
+                actor_text += '...'
+        else:
+            actor_text = str(actors) if actors else 'Unknown'
 
-        self.actor_label = QLabel(str(actor))
+        self.actor_label = QLabel(actor_text)
         self.actor_label.setStyleSheet("""
                     QLabel {
                         color: #00ccff;
