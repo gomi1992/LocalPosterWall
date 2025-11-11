@@ -12,7 +12,7 @@
 - 缓存机制提高性能
 
 Author: LocalPosterWall Team
-Version: 0.0.1
+Version: 0.0.2
 """
 
 import sys
@@ -102,7 +102,7 @@ class MovieWallApp(QMainWindow):
         logger.info("正在初始化用户界面")
 
         # 设置窗口基本属性
-        self.setWindowTitle('本地电影海报墙 v0.0.1')
+        self.setWindowTitle('本地电影海报墙 v0.0.2')
         self.setMinimumSize(1200, 800)
         logger.debug("窗口基本属性设置完成")
 
@@ -311,7 +311,7 @@ class MovieWallApp(QMainWindow):
         """)
 
         # 创建版本标签
-        self.version_label = QLabel('版本: 0.0.1')
+        self.version_label = QLabel('版本: 0.0.2')
         self.version_label.setToolTip("本地电影海报墙版本信息")
         self.status_bar.addPermanentWidget(self.version_label)
         logger.debug("状态栏初始化完成")
