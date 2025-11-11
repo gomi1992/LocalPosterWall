@@ -21,7 +21,7 @@ import time
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                                QHBoxLayout, QPushButton, QFileDialog, QListWidget,
                                QDialog, QLabel, QDialogButtonBox, QMessageBox,
-                               QComboBox, QStatusBar)
+                               QComboBox, QStatusBar, QLineEdit)
 from PySide6.QtCore import Qt
 from pathlib import Path
 from config_manager import ConfigManager
@@ -71,6 +71,8 @@ class MovieWallApp(QMainWindow):
 
             # 存储当前显示的电影列表
             self.current_movies = []
+            # 存储原始电影列表（用于搜索功能）
+            self.original_movies = []
             logger.info("电影列表初始化完成")
 
             # 初始化用户界面
@@ -250,8 +252,23 @@ class MovieWallApp(QMainWindow):
         right_controls.addWidget(self.sort_combo)
         logger.debug("排序控件创建完成")
 
+        # 创建搜索框
+        search_layout = QHBoxLayout()
+        search_label = QLabel('搜索：')
+        search_label.setStyleSheet('color: white;')
+        search_label.setToolTip("搜索电影标题、年份、导演或演员")
+        search_layout.addWidget(search_label)
+        
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("输入关键词搜索...")
+        self.search_input.setStyleSheet('background-color: #333; color: white; padding: 8px; border-radius: 4px;')
+        self.search_input.textChanged.connect(self.search_movies)
+        self.search_input.setMinimumWidth(250)
+        search_layout.addWidget(self.search_input)
+        
         # 添加到控制栏布局
         control_layout.addLayout(left_buttons)
+        control_layout.addLayout(search_layout)
         control_layout.addStretch()
         control_layout.addLayout(right_controls)
 
@@ -333,6 +350,7 @@ class MovieWallApp(QMainWindow):
                 if cached_movies and len(cached_movies) > 0:
                     logger.info(f"缓存中找到 {len(cached_movies)} 部电影")
                     self.current_movies = cached_movies
+                    self.original_movies = cached_movies.copy()  # 保存原始列表用于搜索
                     # 应用当前选择的排序方式
                     current_sort = self.sort_combo.currentText()
                     logger.info(f"应用排序方式: {current_sort}")
@@ -546,6 +564,74 @@ class MovieWallApp(QMainWindow):
             # 如果拼音转换失败，使用空字符串
             return ''
 
+    def search_movies(self, search_text):
+        """
+        根据搜索文本过滤电影列表
+        
+        支持在电影标题、年份、导演和演员中进行模糊搜索。
+        当搜索文本为空时，显示完整的电影列表。
+        
+        Args:
+            search_text (str): 用户输入的搜索文本
+        """
+        logger.info(f"开始搜索电影，关键词: '{search_text}'")
+        start_time = time.time()
+        
+        try:
+            # 如果搜索文本为空，恢复原始电影列表
+            if not search_text.strip():
+                logger.debug("搜索文本为空，恢复原始电影列表")
+                self.current_movies = self.original_movies.copy()
+            else:
+                # 转换搜索文本为小写，用于不区分大小写的搜索
+                search_text_lower = search_text.lower().strip()
+                logger.debug(f"搜索文本(小写): '{search_text_lower}'")
+                
+                # 过滤电影列表
+                filtered_movies = []
+                for movie in self.original_movies:
+                    # 检查标题
+                    title = movie.get('title', '').lower()
+                    # 检查年份（将年份转换为字符串进行比较）
+                    year = str(movie.get('year', '')).lower()
+                    # 检查导演（将导演列表转换为字符串）
+                    director = movie.get('director', [])
+                    if isinstance(director, list):
+                        director_str = ' '.join(director).lower()
+                    else:
+                        director_str = str(director or '').lower()
+                    # 检查演员（将演员列表转换为字符串）
+                    actors = movie.get('actors', [])
+                    actors_str = ' '.join(actors).lower()
+                    
+                    # 判断是否匹配搜索文本
+                    if (search_text_lower in title or 
+                        search_text_lower in year or 
+                        search_text_lower in director_str or 
+                        search_text_lower in actors_str):
+                        filtered_movies.append(movie)
+                
+                self.current_movies = filtered_movies
+            
+            # 应用当前选择的排序方式
+            current_sort = self.sort_combo.currentText()
+            logger.debug(f"搜索后应用排序方式: {current_sort}")
+            self.sort_movies(current_sort)
+            
+            search_time = time.time() - start_time
+            movie_count = len(self.current_movies)
+            logger.info(f"搜索完成，找到 {movie_count} 部匹配的电影，耗时: {search_time:.3f}秒")
+            
+            # 更新状态栏消息
+            if search_text.strip():
+                self.status_bar.showMessage(f"搜索结果: {movie_count} 部电影匹配 '{search_text}'", 3000)
+            else:
+                self.status_bar.showMessage(f"显示全部 {movie_count} 部电影", 2000)
+                
+        except Exception as e:
+            logger.exception(f"搜索电影失败: {str(e)}")
+            self.status_bar.showMessage("搜索失败", 3000)
+    
     def sort_movies(self, sort_method):
         """
         根据选择的方法对电影进行排序
@@ -668,6 +754,7 @@ class MovieWallApp(QMainWindow):
 
             # 更新电影列表
             self.current_movies = all_movies
+            self.original_movies = all_movies.copy()  # 保存原始列表用于搜索
             total_movies = len(all_movies)
 
             logger.info(f"所有文件夹扫描完成，总共找到 {total_movies} 部电影")
